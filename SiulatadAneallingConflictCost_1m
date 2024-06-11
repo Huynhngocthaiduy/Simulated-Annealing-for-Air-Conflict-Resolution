@@ -1,0 +1,84 @@
+clc
+clear all;
+list = dir('*.txt');
+Statistic = struct('FileName',{},'MaxNumberofConflicts',{},'MinNumberofConflicts',{},'MaxTotalCost',{},'MinTotalCost',{},'Standar',{},'TimeAvarage',{},'NumberofSuccess',{}); 
+for p = 1:1%length(list)
+list(p).name
+Result = struct('Solution',{},'NumberofConflicts',{},'TotalCost',{},'TimeRuning',{});    
+for l= 1:1
+tic
+%rng('shuffle') ;
+Percent=0.5;alpha = 0.99;
+[Data,Cost]=Text2Matrix('cluster_20ac_2err_2.txt');
+%[Data,Cost]=Text2Matrix(list(p).name);
+[Data1,Data2,Data3,Data4]=size(Data);
+%Initial temperate of cost--------------
+DeltaCostMax =max(Cost) ;
+TCost_initial=-DeltaCostMax/log(Percent);
+%---------------------------------------
+S = randi([1 151],1,Data1);
+%S=151*ones(1,Data1);
+Conflict = CountConflicts(S,Data);
+SumCost = sum(Cost(S)); 
+T_initial = TCost_initial;
+Graph=[];
+Sbest=S;
+ ConfBest=CountConflicts(Sbest,Data);CostBest=sum(Cost(Sbest)); 
+while (T_initial > 0.005)
+    rng('shuffle') ;
+  for i=1:2000
+   
+     [SNew, DeltaConf, DeltaSumCost] = FindNeighborDeltaCost(S,Data,Cost);
+     if ((CountConflicts(SNew,Data)< ConfBest)||(sum(Cost(SNew))< CostBest)&&((CountConflicts(SNew,Data)==0)))
+         Sbest = SNew;
+         ConfBest=CountConflicts(Sbest,Data);CostBest=sum(Cost(Sbest));
+    end
+     Prob = min([1,exp(-DeltaConf/(T_initial*0.5))])*min([1,exp(-DeltaSumCost/(T_initial*45))]);   
+    if rand < Prob
+      S=SNew;
+      Conflict = Conflict + DeltaConf;
+      SumCost = SumCost + DeltaSumCost;
+    end
+    
+  end
+ T_initial=T_initial*alpha ;
+G=[T_initial,Conflict,SumCost,CountConflicts(Sbest,Data),sum(Cost(Sbest))]
+Graph = [Graph;G];
+end % end while;
+[CountConflicts(S,Data),sum(Cost(S))]
+   if (CountConflicts(Sbest,Data)<=CountConflicts(S,Data))&&(sum(Cost(Sbest))<=sum(Cost(S)))
+    S=Sbest;
+   end
+[CountConflicts(S,Data),sum(Cost(S))]
+toc
+Result(l).Solution = S;
+Result(l).NumberofConflicts = Conflict;
+Result(l).TotalCost = SumCost; 
+Result(l).TimeRuning = toc;
+ end % end number of run
+cd('Result')
+writetable(struct2table(Result), list(p).name)
+% v=0;
+% GoodResult = struct('Solution',{},'NumberofConflicts',{},'TotalCost',{},'TimeRuning',{});
+%      for d=1:15
+%        if Result(d).NumberofConflicts == 0
+%          v=v+1;
+%          GoodResult(v)=Result(d); 
+%        end
+%      end
+%      
+% Statistic(p).FileName = list(p).name;
+% Statistic(p).NumberofSuccess = v;  
+% Statistic(p).MaxNumberofConflicts = max([Result.NumberofConflicts]);
+% Statistic(p).MinNumberofConflicts = min([Result.NumberofConflicts]);
+% Statistic(p).MaxTotalCost = max([GoodResult.TotalCost]);
+% Statistic(p).MinTotalCost = min([GoodResult.TotalCost]);
+% Statistic(p).Standar = std([GoodResult.TotalCost]);
+% Statistic(p).TimeAvarage = mean([GoodResult.TotalCost]); 
+% writetable(struct2table(Statistic), 'Statistic.txt');
+cd ../
+clear Result;
+
+
+
+end % end file list
